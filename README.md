@@ -21,6 +21,118 @@ documentación Postman
 # Autenticación
 En caso de ejecutar las operaciones en modo local, empleando el context broker, no será necesario ningun tipo de autenticación.
 
+En el de usar una plataforma con autenticación, el escenario típico de uso involucra varios elementos:
+- **App**: Es la aplicación que accede a los recursos. Esto sería en el caso de este tutorial las peticiones cURL o Postman.
+- **Back-end Apps**: Son los recursos protegidos. En este caso, es el Context Broker, pero podría ser cualquier elemento que requiera securización
+- **IDM**: Es quien provee identificación a los usuarios
+- **PEP**: Es un proxy que permite a la aplicación acceder a los recursos protegidos, por el ejemplo, el context broker
+- **PDP**:
+
+En la siguiente imagen podemos ver el esquema de los elemntos :
+
+![Autenticación](images/security.png)
+
+El proceso para autenticarnos y obtener el dato sería el siguente:
+
+1. Solicitar el token de acceso al **IDM** con los credenciales de usuario
+2. Enviar la petición que accede al dato junto con el token obtenido en el paso 1 al **PEP**  como cabecera de las peticiones con el nombre `X-Auth-Token`
+
+## Obtención del token
+
+Para obtener el token necesitamos enviar una petición al IDM para obtener el token. En ella debemos enviar la siguiente petición:
+
+**Petición**
+
+```bash
+curl -iX POST 'http://localhost:15001/v3/auth/tokens' \
+-H 'Content-Type: application/json' \
+-d '
+{
+    "auth": {
+        "identity": {
+            "methods": [
+                "password"
+            ],
+            "password": {
+                "user": {
+                    "domain": {
+                        "name": "SERVICE"
+                    },
+                    "name": "USER",
+                    "password": "PASSWORD"
+                }
+            }
+        }
+    }
+}'
+```
+
+En donde hay que sustituir: 
+- SERVICE: por el serivicio (Fiware-Service) al que queremos acceder
+- USER: El usuario con el que queremos acceder
+- PASSWORD: La contraseña del usuario
+
+**Respuesta**
+
+Obtendremos por parte del IDM un código de respuesta 201, siendo la respuesta algo similar a:
+
+```http
+HTTP/1.1 201 Created
+Server: nginx
+Date: Fri, 29 May 2020 10:34:00 GMT
+Content-Type: application/json
+Content-Length: 549
+Connection: keep-alive
+X-Subject-Token: 88d70506abb00141b3b36005a779651e
+Vary: X-Auth-Token
+X-Openstack-Request-Id: req-4f9922f1-5980-4971-a08a-746f1c97c189
+X-Frame-Options: SAMEORIGIN
+Strict-Transport-Security: max-age=31536000; includeSubdomains;
+X-Content-Type-Options: nosniff
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-XSS-Protection: 1; mode=block
+Referrer-Policy: same-origin
+
+{
+  "token": {
+    "methods": [
+      "password"
+    ],
+    "expires_at": "2020-05-29T13:34:00.917768Z",
+    "extras": {
+      "password_creation_time": "2019-02-20T11:33:21Z",
+      "sndfa_email": false,
+      "last_login_attempt_time": "2020-05-29T10:33:42.000000",
+      "pwd_user_in_blacklist": false,
+      "password_expiration_time": "2029-02-17T11:33:21Z"
+    },
+    "user": {
+      "domain": {
+        "id": "350afb322fe448234562728e43602421",
+        "name": "SERVICE"
+      },
+      "id": "3533f385094503da770bab252e1ba31",
+      "name": "USER"
+    },
+    "audit_ids": [
+      "xG-DDK85abc12399QhRPw"
+    ],
+    "issued_at": "2020-05-29T10:34:00.917798Z"
+  }
+}
+```
+
+El token de autenticación que necesitamos se encuentra en la cabecera http `X-Subject-Token`
+
+### Obtención del token mediante Postman
+
+Postman permite definir variables de entorno y ejecutar pequeñas acciones - script - tras realizar la petición. La petición de autenticación guarda el `X-Subject-Token` en la variable `token` que se emplea como valor de la cabecera `X-Auth-Token` definida en las peticiones de la colección.
+
+![script postman](images/postman_auth.png)
+
+
 # Operaciones Básicas
 
 En esta sección vamos a hacer un breve repaso por las operaciones básicas del curso previo, para gestionar entidades
@@ -269,6 +381,7 @@ Por norma general, no se recomienda este tipo de datos por que no siempre los co
 
 ## Tipos de datos geospaciales
 
+
 Este tipo de datos contien información georeferenciada para trabajar con ella con las operacionse que veremos posteriormente. Una limitación es que sólo se permite un atributo geoespacial por entidad (si necesitamos guardar otro dato adicional, que no será "interactivo"), podemos usar otro tipo de dato y recurrir a un texto o un atributo con valor compuesto. Existen 5 tipos de datos geoespaciales:
 - **geo:point**. Es un punto definido por un string que contiene latitud y longitud
 - **geo:line**. Es una línea definido por un string que contiene dos pares de latitud y longitud que representan el principio y el final de la línea
@@ -276,7 +389,9 @@ Este tipo de datos contien información georeferenciada para trabajar con ella c
 - **geo:polygon**. Es un polígono definido por un string que contiene pares de latitud y longitud que representan cada punto del polígono. Tiene que ser un polígono cerrado (El primer y el último punto deben tener las mismas coordenadas).
 - **geo:json**. Es un standard. En este caso el valor es un atributo compuesto que define la geometria o tipo de dato geospacial internamente. Es el dato que se suele usar en los modelos de datos armonizados publicados por la fundación FIWARE.
 
-En este caso, a la entidad se le ha dado un atributo `location` de tipo `geo:json` qeu contiene un punto con dos coordenadas
+> **Referencia**. Para mas información acceder al apartado *Geospatial properties of entities* de la [especificación de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
+
+Para el siguiente ejemplo, a la entidad se le ha dado un atributo `location` de tipo `geo:json` que contiene un punto con dos coordenadas
 
 ```JSON
 ...
@@ -298,7 +413,9 @@ En este caso, a la entidad se le ha dado un atributo `location` de tipo `geo:jso
 
 Son atributos que representan un momento temporal. Se basan en el standard [ISO 8601](https://es.wikipedia.org/wiki/ISO_8601). El tipo de atributo debe ser `DateTime`
 
-En el caso de la entidad anterior, se ha creado el atributo `lastRevision`con fecha de 27 de Diciembre de 2019 a las 8:33 (hora UTC)
+> **Referencia**. Para mas información acceder a las [las notas de implementación de ORION](https://fiware-orion.readthedocs.io/en/master/user/ngsiv2_implementation_notes/index.html#datetime-support)
+
+En el caso de la entidad anterior, se ha creado el atributo `lastRevision` con fecha de 27 de Diciembre de 2019 a las 8:33 (hora UTC)
 
 ```JSON
 ...
@@ -435,6 +552,8 @@ Existe un atributo especial denominado `dateExpires` que permite definir una fec
 
 La utilidad de esta opción reside en guardar elementos que no son objetos reales y para los que **no** está indicado el uso de el context broker (como pueden ser alertas, eventos etc) o para objetos que tiene una fecha de caducidad predeterminada y no queremos seguir conservando la información.
 
+> **Referencia**. Para mas información acceder al apartado [entidades transistorias de la documentación de ORION](https://fiware-orion.readthedocs.io/en/master/user/transient_entities/index.html)
+
 Para crear una entidad transitoria podríamos hacerlo de la siguietne manera:
 
 **Petición**
@@ -469,6 +588,11 @@ Para comprobar si la entidad sigue existiendo, podemos realizar la siguiente pet
 ```bash
 curl -X GET 'http://localhost:1026/v2/entities/transient:Event1'
 ```
+> **Nota**
+> 
+> Si la fecha de `dateExpires` es menor que la fecha actual, la entidad será automáticamente eliminada. Revise la fecha cuando vaya 
+> 
+
 
 ## Modificadores de respuesta: atributos, clave-valor y solo valores
 
@@ -496,6 +620,8 @@ Teniendo el formato de salida siguiente:
   }
 }
 ```
+
+Esta se puede modificar añadiendo parámetros a la petición.
 
 ### Seleccionar que atributos se envían
 
@@ -556,12 +682,17 @@ Siendo la respuesta la siguente:
 [120,26.5]
 ```
 
+> **Referencia**. Para mas información acerca de la forma de devolución de los datos de una entidad acceder al apartado *Simplified Entity Representation* de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
+
 # Operaciones por lotes
 
 Existen tres tipos de operaciones por lotes:
 - **Update**: Permite crear, actualizar o borrar una lista de entidades en una sola operación. Con el parámetro `ActionType`, que puede tener los siguientes valores : *append, appedStrict, update, delete o replace*
 - **Query**: Permite hacer una búsqueda avanzada. Se diferencia de los filtros (que se verán a continuación) por que permite mezclar distintos tipos de entidades y permite hacer una búsqueda con más caracteres (limitación de caracteres en URL)
 - **Notify**: Consume el payload de las notificaciones entrantes para sincronizar los datos de los distintos Context Brokers (Federación de datos)
+
+> **Referencia**. Para mas información acceder al apartado *Batch Operations* de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
+
 
 ## Ejemplo de actualización de datos
 
@@ -602,7 +733,7 @@ Debemos obtener un código de respuesta 204 si la operación ha sido satisfactor
 
 Análogamente, a esta petición, cambiado el parámetro `actionType` podemos realizar modificaciones o borrados de las entidades.
 
-## Ejemplo de actualización de consulta
+## Ejemplo de consulta
 
 Haciendo una petición a `/v2/op/query` consutar las entidades que cumplen los siguientes requisitos:
 - Cualquiera que cumpla el patron de ID de entidad (todas cumplen) de tipo `City`
@@ -664,6 +795,8 @@ En este caso la respuesta es la siguiente:
 # Filtros en URL
 
 Sería el análogo a la operación  `POST /v2/op/query` pero más simplificada. Los filtros se añaden a la URL de la petición. Para los distintos filtros:
+
+> **Referencia**. Para mas información acceder al apartado Batch Operations de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
 
 ## Filtrado de ID y tipo
 
@@ -744,8 +877,9 @@ Se emplea en el filtrado por atributos. Pueden ser:
 - Less or equal than: <=.
 - Match pattern: ~= Patron regex para string. Ej: color~=ow. Encontraría los colores brown and yellow
 
+> **Referencia**. Para mas información acceder al apartado Simple Query Language de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
 
-# Geoquerys
+# Geoqueries
 
 Permite hacer búsquedas de entidades con atributos geoespaciales en base a una *relación* y una *referencia*. Cada consulta geoespacial tiene 3 parámetros: 
 
@@ -769,6 +903,12 @@ Permite hacer búsquedas de entidades con atributos geoespaciales en base a una 
 **Coords**: Sirve para especificar las coordenadas de la referencia
 
 Para el siguiente ejemplo vamos a crear 8 entidades representado a las 8 capitales de provincia de Andalucía:
+
+> **Referencia**. Para mas información acceder al apartado *Geographical Queries* de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
+
+<script src="https://gist.github.com/FIWAREZone/c2634e828e96996141865a2b26a454c3.js"></script>
+
+Con ellos construimos una operación por lotes o batch operation con la cual crear los 8 entidades:
 
 ```bash
 curl -X POST 'http://localhost:1026/v2/op/update' \
@@ -1080,7 +1220,11 @@ Dado que las coodenadas del polígono donde se buscan las entidades va en la URL
 
 Para ello debemos añadir los 3 apartados de una geoquery, `georel`, `geometry` y `coords` al apartado `expression` de la operación por lotes.
 
-En este caso vamos a ver todas las entidades que se encuentran en la provincia de Málaga
+En este caso vamos a ver todas las entidades que se encuentran en la provincia de Málaga. Para ello generamos un polígono con la forma de toda la provincia:
+
+<script src="https://gist.github.com/FIWAREZone/30601196e94cc88c6173fd992e6bede3.js"></script>
+
+Ahora construimos la petición con todas las coordenadas del polígono en el apartado coords:
 
 ```bash
 curl -X POST 'http://localhost:1026/v2/op/query' \
@@ -1535,7 +1679,3 @@ curl -iX POST 'http://localhost:1026/v2/subscriptions' \
     }
 }'
 ```
-
-
-
-
