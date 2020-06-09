@@ -906,7 +906,7 @@ Para el siguiente ejemplo vamos a crear 8 entidades representado a las 8 capital
 
 > **Referencia**. Para mas información acceder al apartado *Geographical Queries* de la [especificacion de NGSIV2](http://fiware.github.io/specifications/ngsiv2/stable/)
 
-<script src="https://gist.github.com/FIWAREZone/c2634e828e96996141865a2b26a454c3.js"></script>
+<!--- <script src="https://gist.github.com/FIWAREZone/c2634e828e96996141865a2b26a454c3.js"></script> -->
 
 Con ellos construimos una operación por lotes o batch operation con la cual crear los 8 entidades:
 
@@ -1222,7 +1222,7 @@ Para ello debemos añadir los 3 apartados de una geoquery, `georel`, `geometry` 
 
 En este caso vamos a ver todas las entidades que se encuentran en la provincia de Málaga. Para ello generamos un polígono con la forma de toda la provincia:
 
-<script src="https://gist.github.com/FIWAREZone/30601196e94cc88c6173fd992e6bede3.js"></script>
+<!--- <script src="https://gist.github.com/FIWAREZone/30601196e94cc88c6173fd992e6bede3.js"></script> -->
 
 Ahora construimos la petición con todas las coordenadas del polígono en el apartado coords:
 
